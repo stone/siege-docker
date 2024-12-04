@@ -1,11 +1,12 @@
 FROM --platform=$BUILDPLATFORM debian:bookworm-slim AS builder
-ENV SIEGE_VERSION=4.1.7
+ARG SIEGE_VERSION=4.1.7
 
 # Install and build Siege from source
 RUN set -ex && \
   mkdir -p /app && \
   cd /app && \
   apt-get update && \
+  apt-get -y upgrade && \
   apt-get install -y --no-install-recommends \
   build-essential \
   libssl-dev \
@@ -18,8 +19,7 @@ RUN set -ex && \
   cd siege-${SIEGE_VERSION} && \
   ./configure && \
   make && \
-  make install && \
-  apt-get purge -y --auto-remove $buildDeps
+  make install
 
 FROM debian:bookworm-slim
 
@@ -39,3 +39,11 @@ RUN apt-get update && \
 
 ENTRYPOINT [ "/usr/local/bin/siege" ]
 CMD [ "--help" ]
+
+LABEL org.opencontainers.image.vendor="stone" \
+  org.opencontainers.image.url="https://github.com/JoeDog/siege" \
+  org.opencontainers.image.source="https://github.com/stone/siege-docker" \
+  org.opencontainers.image.title="Siege" \
+  org.opencontainers.image.description="Siege is an open source regression test and benchmark utility" \
+  org.opencontainers.image.documentation="https://github.com/stone/siege-docker/blob/main/README.md" \
+  org.opencontainers.image.licenses="gpl-3.0"
