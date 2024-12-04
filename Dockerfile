@@ -6,7 +6,6 @@ RUN set -ex && \
   mkdir -p /app && \
   cd /app && \
   apt-get update && \
-  apt-get -y upgrade && \
   apt-get install -y --no-install-recommends \
   build-essential \
   libssl-dev \
@@ -30,6 +29,7 @@ COPY --from=builder /app/siege-*/utils/bombardment /usr/local/bin/bombardment
 COPY --from=builder /app/siege-*/doc/siegerc /etc/siegerc
 COPY --from=builder /app/siege-*/COPYING /SIEGE-COPYING
 RUN apt-get update && \
+  apt-get -y upgrade && \
   apt-get install -y --no-install-recommends libssl3 ca-certificates zlib1g && \
   chmod 0655 /usr/local/bin/siege && \
   chmod 0655 /usr/local/bin/siege.config && \
