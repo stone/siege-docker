@@ -32,7 +32,7 @@ jobs:
 
       # Log the latest version
       - name: Display the latest version
-        run: echo "The latest version of Siege is ${{ steps.get-version.outputs.version }}"
+        run: echo "The latest version of Siege is ${{ env.LATEST_VERSION }}"
 
       # Log in to DockerHub
       - name: Log in to DockerHub

@@ -1,4 +1,12 @@
+![Trebuchet, powerful siege engine](.siege.png)
+
 # Siege Docker Image
+![action badge](https://github.com/stone/siege-docker/actions/workflows/docker-build.yml/badge.svg)
+![Docker Image Version](https://img.shields.io/docker/v/ttyse/siege)
+![Docker Pulls](https://img.shields.io/docker/pulls/ttyse/siege)
+![Docker Image Size (tag)](https://img.shields.io/docker/image-size/ttyse/siege/latest)
+
+
 
 This repository provides a Dockerfile to build a containerized version of
 [Siege](https://www.joedog.org/siege-manual/), a powerful HTTP load testing and
