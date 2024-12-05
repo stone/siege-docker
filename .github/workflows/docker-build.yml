@@ -29,7 +29,6 @@ jobs:
         run: |
           LATEST_VERSION=$(curl -s https://download.joedog.org/siege/ | grep -oP 'siege-\K[0-9.]+(?=\.tar\.gz)' | sort -V | tail -n 1)
           echo "LATEST_VERSION=${LATEST_VERSION}" >> $GITHUB_ENV
-          echo "::set-output name=version::${LATEST_VERSION}"
 
       # Log the latest version
       - name: Display the latest version
@@ -54,7 +53,7 @@ jobs:
           platforms: linux/amd64,linux/arm64
           push: true
           tags: |
-            ttyse/siege:${{ steps.get-version.outputs.version }}
+            ttyse/siege:${{ env.LATEST_VERSION }}
             ttyse/siege:latest
           build-args: |
-            SIEGE_VERSION=${{ steps.get-version.outputs.version }}
+            SIEGE_VERSION=${{ env.LATEST_VERSION }}
