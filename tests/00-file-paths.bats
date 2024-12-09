@@ -1,6 +1,6 @@
 #!/usr/bin/env bats
-load '/bats-core/lib/bats-support/load'
-load '/bats-core/lib/bats-file/load'
+bats_load_library 'bats-support'
+bats_load_library 'bats-file'
 
 @test 'Test: /usr/local/bin/siege' {
   local _file='/usr/local/bin/siege'
