@@ -11,41 +11,99 @@ on:
     - cron: "0 0 * * 0" # Runs every Sunday at midnight UTC
 
 jobs:
-  build-and-push:
+  build-and-test:
     runs-on: ubuntu-latest
-
-    permissions:
-      contents: read
-      packages: write
+    outputs:
+      latest_version: ${{ steps.get-version.outputs.latest_version }}
+      major_version: ${{ steps.get-version.outputs.major_version }}
+      minor_version: ${{ steps.get-version.outputs.minor_version }}
 
     steps:
-      # Checkout the repository
+      - name: Set up Docker
+        uses: docker/setup-docker-action@v4
+        with:
+          daemon-config: |
+            {
+              "debug": true,
+              "features": {
+                "containerd-snapshotter": true
+              }
+            }
+
       - name: Checkout repository
         uses: actions/checkout@v3
 
-      # Get the latest version of Siege
       - name: Get latest Siege version
         id: get-version
         run: |
           LATEST_VERSION=$(curl -s https://download.joedog.org/siege/ | grep -oP 'siege-\K[0-9.]+(?=\.tar\.gz)' | sort -V | tail -n 1)
-          echo "LATEST_VERSION=${LATEST_VERSION}" >> $GITHUB_ENV
+          echo "latest_version=${LATEST_VERSION}" >> "$GITHUB_OUTPUT"
+          echo "major_version=$(echo ${LATEST_VERSION} | cut -d. -f1)" >> "$GITHUB_OUTPUT"
+          echo "minor_version=$(echo ${LATEST_VERSION} | cut -d. -f1-2)" >> "$GITHUB_OUTPUT"
 
-      # Log the latest version
       - name: Display the latest version
-        run: echo "The latest version of Siege is ${{ env.LATEST_VERSION }}"
+        run: |
+          echo "The latest version of Siege is ${{ steps.get-version.outputs.latest_version }}"
+          echo "The latest major version of Siege is ${{ steps.get-version.outputs.major_version }}"
+          echo "The latest minior version of Siege is ${{ steps.get-version.outputs.minor_version }}"
 
-      # Log in to DockerHub
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: Dockerfile
+          platforms: linux/amd64,linux/arm64
+          push: false
+          load: true
+          tags: |
+            ttyse/siege:${{ steps.get-version.outputs.latest_version }}
+          build-args: |
+            SIEGE_VERSION=${{ steps.get-version.outputs.latest_version }}
+
+      - name: Setup Bats and bats libs
+        uses: bats-core/bats-action@3.0.0
+        with:
+          support-path: "$HOME/.local/share/bats-support"
+          assert-path: "$HOME/.local/share/bats-assert"
+          detik-path: "$HOME/.local/share/detik-path"
+          file-path: "$HOME/.local/share/bats-file"
+
+      - name: Run BATS Container tests
+        id: bats-container-tests
+        run: |
+          docker run --rm \
+            -e TERM=linux \
+            -e BATS_LIB_PATH=/bats \
+            -v "${{ github.workspace }}/tests:/tests:ro" \
+            -v "${HOME}/.local/share:/bats:ro" \
+            --entrypoint=/bats/bats/bin/bats \
+            ttyse/siege:${{ steps.get-version.outputs.latest_version }} \
+            /tests
+
+  push:
+    needs: build-and-test
+    runs-on: ubuntu-latest
+    if: success() && github.ref == 'refs/heads/main' # Only run if tests pass and branch is main
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
+
       - name: Log in to DockerHub
         uses: docker/login-action@v2
         with:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_PASSWORD }}
 
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v2
-
-      # Build and push the Docker image
-      - name: Build and push Docker image
+      - name: Push Docker image
         uses: docker/build-push-action@v4
         with:
           context: .
@@ -53,7 +111,9 @@ jobs:
           platforms: linux/amd64,linux/arm64
           push: true
           tags: |
-            ttyse/siege:${{ env.LATEST_VERSION }}
+            ttyse/siege:${{ needs.get-version.outputs.latest_version }}
+            ttyse/siege:${{ needs.get-version.outputs.major_version }}
+            ttyse/siege:${{ needs.get-version.outputs.minor_version }}
             ttyse/siege:latest
           build-args: |
-            SIEGE_VERSION=${{ env.LATEST_VERSION }}
+            SIEGE_VERSION=${{ needs.get-version.outputs.latest_version }}
