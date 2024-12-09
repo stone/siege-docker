@@ -83,9 +83,9 @@ jobs:
             -e BATS_LIB_PATH=/bats \
             -v "${{ github.workspace }}/tests:/tests:ro" \
             -v "${HOME}/.local/share:/bats:ro" \
-            --entrypoint=/bats/bin/bats \
+            --entrypoint=/bin/bash \
             ttyse/siege:${{ steps.get-version.outputs.latest_version }} \
-            /tests
+            -c "ls -alR /bats; pwd; ls -alR /tests; env"
 
       - name: Save Build Cache
         uses: actions/cache/save@v4
