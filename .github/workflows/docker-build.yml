@@ -13,10 +13,6 @@ on:
 jobs:
   build-and-test:
     runs-on: ubuntu-latest
-    outputs:
-      latest_version: ${{ steps.get-version.outputs.latest_version }}
-      major_version: ${{ steps.get-version.outputs.major_version }}
-      minor_version: ${{ steps.get-version.outputs.minor_version }}
 
     steps:
       - name: Set up Docker
@@ -37,15 +33,15 @@ jobs:
         id: get-version
         run: |
           LATEST_VERSION=$(curl -s https://download.joedog.org/siege/ | grep -oP 'siege-\K[0-9.]+(?=\.tar\.gz)' | sort -V | tail -n 1)
-          echo "latest_version=${LATEST_VERSION}" >> "$GITHUB_OUTPUT"
-          echo "major_version=$(echo ${LATEST_VERSION} | cut -d. -f1)" >> "$GITHUB_OUTPUT"
-          echo "minor_version=$(echo ${LATEST_VERSION} | cut -d. -f1-2)" >> "$GITHUB_OUTPUT"
+          echo "latest_version=${LATEST_VERSION}" >> "$GITHUB_ENV"
+          echo "major_version=$(echo ${LATEST_VERSION} | cut -d. -f1)" >> "$GITHUB_ENV"
+          echo "minor_version=$(echo ${LATEST_VERSION} | cut -d. -f1-2)" >> "$GITHUB_ENV"
 
       - name: Display siege version
         run: |
-          echo "The latest version of Siege is ${{ steps.get-version.outputs.latest_version }}"
-          echo "The latest major version of Siege is ${{ steps.get-version.outputs.major_version }}"
-          echo "The latest minior version of Siege is ${{ steps.get-version.outputs.minor_version }}"
+          echo "The latest version of Siege is ${{ env.latest_version }}"
+          echo "The latest major version of Siege is ${{ env.major_version }}"
+          echo "The latest minior version of Siege is ${{ env.minor_version }}"
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v2
@@ -53,7 +49,7 @@ jobs:
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
 
-      - name: Build and push Docker image
+      - name: Build Docker image used for test
         uses: docker/build-push-action@v6
         with:
           context: .
@@ -62,9 +58,9 @@ jobs:
           push: false
           load: true
           tags: |
-            ttyse/siege:${{ steps.get-version.outputs.latest_version }}
+            ttyse/siege:${{ env.latest_version }}
           build-args: |
-            SIEGE_VERSION=${{ steps.get-version.outputs.latest_version }}
+            SIEGE_VERSION=${{ env.latest_version }}
 
       - name: Setup Bats and bats libs
         uses: bats-core/bats-action@3.0.0
@@ -83,20 +79,8 @@ jobs:
             -v "${{ github.workspace }}/tests:/tests:ro" \
             -v "${HOME}/.local/share:/bats:ro" \
             --entrypoint=/bats/bats/bin/bats \
-            ttyse/siege:${{ steps.get-version.outputs.latest_version }} \
+            ttyse/siege:${{ env.latest_version }} \
             /tests
-
-  push:
-    needs: build-and-test
-    runs-on: ubuntu-latest
-    if: success()
-    #&& github.ref == 'refs/heads/main' # Only run if tests pass and branch is main
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v2
 
       - name: Log in to DockerHub
         uses: docker/login-action@v2
@@ -104,13 +88,11 @@ jobs:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_PASSWORD }}
 
-      - name: Display siege version
+      - name: Get docker images
         run: |
-          echo "The latest version of Siege is ${{ needs.get-version.outputs.latest_version }}"
-          echo "The latest major version of Siege is ${{ needs.get-version.outputs.major_version }}"
-          echo "The latest minior version of Siege is ${{ needs.get-version.outputs.minor_version }}"
+          docker images
 
-      - name: Push Docker image
+      - name: Build and push Docker image
         uses: docker/build-push-action@v4
         with:
           context: .
@@ -118,9 +100,9 @@ jobs:
           platforms: linux/amd64,linux/arm64
           push: false
           tags: |
-            ttyse/siege:${{ needs.get-version.outputs.latest_version }}
-            ttyse/siege:${{ needs.get-version.outputs.major_version }}
-            ttyse/siege:${{ needs.get-version.outputs.minor_version }}
+            ttyse/siege:${{ env.latest_version }}
+            ttyse/siege:${{ env.major_version }}
+            ttyse/siege:${{ env.minor_version }}
             ttyse/siege:latest
           build-args: |
-            SIEGE_VERSION=${{ needs.get-version.outputs.latest_version }}
+            SIEGE_VERSION=${{ env.latest_version }}
