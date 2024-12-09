@@ -26,7 +26,7 @@ jobs:
         id: get-version
         run: |
           LATEST_VERSION=$(curl -s https://download.joedog.org/siege/ | grep -oP 'siege-\K[0-9.]+(?=\.tar\.gz)' | sort -V | tail -n 1)
-          echo "latest_version=${LATEST_VERSION}" >> "$GITHU_OUTPUT"
+          echo "latest_version=${LATEST_VERSION}" >> "$GITHUB_OUTPUT"
           echo "major_version=$(echo ${LATEST_VERSION} | cut -d. -f1)" >> "$GITHUB_OUTPUT"
           echo "minor_version=$(echo ${LATEST_VERSION} | cut -d. -f1-2)" >> "$GITHUB_OUTPUT"
 
