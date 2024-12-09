@@ -53,14 +53,6 @@ jobs:
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
 
-      - name: Restore Build Cache
-        uses: actions/cache/save@v4
-        with:
-          path: /tmp/.buildx-cache
-          key: ${{ runner.os }}-docker-build-cache
-          restore-keys: |
-            ${{ runner.os }}-docker-build-cache
-
       - name: Build and push Docker image
         uses: docker/build-push-action@v6
         with:
@@ -68,6 +60,7 @@ jobs:
           file: Dockerfile
           platforms: linux/amd64,linux/arm64
           push: false
+          load: true
           tags: |
             ttyse/siege:${{ steps.get-version.outputs.latest_version }}
           build-args: |
