@@ -8,26 +8,28 @@ RUN set -ex && \
   apt-get update && \
   apt-get install -y --no-install-recommends \
   build-essential \
+  automake \
   libssl-dev \
   zlib1g-dev \
   curl \
   ca-certificates \
+  git \
   libssl3 && \
-  curl -O -L http://download.joedog.org/siege/siege-${SIEGE_VERSION}.tar.gz && \
-  tar -xvzf siege-${SIEGE_VERSION}.tar.gz && \
-  cd siege-${SIEGE_VERSION} && \
+  git clone --depth 1 --branch v${SIEGE_VERSION} https://github.com/JoeDog/siege.git && \
+  cd siege && \
+  ./utils/bootstrap && \
   ./configure && \
   make && \
   make install
 
 FROM debian:bookworm-slim
 
-COPY --from=builder /app/siege-*/src/siege /usr/local/bin/siege
-COPY --from=builder /app/siege-*/utils/siege.config /usr/local/bin/siege.config
-COPY --from=builder /app/siege-*/utils/siege2csv.pl /usr/local/bin/siege2csv
-COPY --from=builder /app/siege-*/utils/bombardment /usr/local/bin/bombardment
-COPY --from=builder /app/siege-*/doc/siegerc /etc/siegerc
-COPY --from=builder /app/siege-*/COPYING /SIEGE-COPYING
+COPY --from=builder /app/siege/src/siege /usr/local/bin/siege
+COPY --from=builder /app/siege/utils/siege.config /usr/local/bin/siege.config
+COPY --from=builder /app/siege/utils/siege2csv.pl /usr/local/bin/siege2csv
+COPY --from=builder /app/siege/utils/bombardment /usr/local/bin/bombardment
+COPY --from=builder /app/siege/doc/siegerc /etc/siegerc
+COPY --from=builder /app/siege/COPYING /SIEGE-COPYING
 RUN apt-get update && \
   apt-get -y upgrade && \
   apt-get install -y --no-install-recommends libssl3 ca-certificates zlib1g && \

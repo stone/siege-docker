@@ -32,13 +32,25 @@ jobs:
       - name: Get latest Siege version
         id: get-version
         run: |
-          LATEST_VERSION=$(curl -s https://download.joedog.org/siege/ | grep -oP 'siege-\K[0-9.]+(?=\.tar\.gz)' | sort -V | tail -n 1)
+          LATEST_TAG=$(git ls-remote --tags --sort='-v:refname' https://github.com/JoeDog/siege.git | \
+            grep -E 'refs/tags/v[0-9]+\.[0-9]+\.[0-9]+$' | \
+            head -n 1 | \
+            cut -d/ -f3)
+
+            if [[ $LATEST_TAG =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+              echo "latest_tag=$LATEST_TAG" >> "$GITHUB_ENV"
+            else
+              echo "No valid release tag found"
+              exit 1
+            fi
+          LATEST_VERSION=$(echo $LATEST_TAG | cut -d 'v' -f2)
           echo "latest_version=${LATEST_VERSION}" >> "$GITHUB_ENV"
           echo "major_version=$(echo ${LATEST_VERSION} | cut -d. -f1)" >> "$GITHUB_ENV"
           echo "minor_version=$(echo ${LATEST_VERSION} | cut -d. -f1-2)" >> "$GITHUB_ENV"
 
       - name: Display siege version
         run: |
+          echo "The latest git tag of Siege is ${{ env.latest_tag }}"
           echo "The latest version of Siege is ${{ env.latest_version }}"
           echo "The latest major version of Siege is ${{ env.major_version }}"
           echo "The latest minior version of Siege is ${{ env.minor_version }}"
